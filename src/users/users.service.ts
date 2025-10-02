@@ -1,4 +1,4 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
+import { BadRequestException, Injectable, NotFoundException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { User } from './user.entity';
@@ -11,9 +11,17 @@ export class UsersService {
     private readonly usersRepo: Repository<User>,
   ) {}
 
-  async create(data: CreateUserDto): Promise<User> {
+ async create(data: { name: string; email: string }) {
     const user = this.usersRepo.create(data);
-    return this.usersRepo.save(user);
+    try {
+      return await this.usersRepo.save(user);
+    } catch (err: any) {
+      // TypeORM QueryFailedError en SQLite
+      if (err.code === 'SQLITE_CONSTRAINT' && err.message.includes('UNIQUE')) {
+        throw new BadRequestException('Email already in use');
+      }
+      throw err; // otros errores
+    }
   }
 
   async findAll(): Promise<User[]> {

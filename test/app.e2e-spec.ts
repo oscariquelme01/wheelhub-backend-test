@@ -42,7 +42,9 @@ describe('UsersModule (e2e)', () => {
   });
 
   it('GET /users/:id → devuelve un usuario', async () => {
-    const res = await request(server).get(`/users/${createdUserId}`).expect(200);
+    const res = await request(server)
+      .get(`/users/${createdUserId}`)
+      .expect(200);
     expect(res.body.id).toBe(createdUserId);
   });
 
@@ -58,5 +60,23 @@ describe('UsersModule (e2e)', () => {
   it('DELETE /users/:id → elimina un usuario', async () => {
     await request(server).delete(`/users/${createdUserId}`).expect(200);
     await request(server).get(`/users/${createdUserId}`).expect(404);
+  });
+
+  it('POST /users → no permite crear dos usuarios con el mismo email', async () => {
+    // Creamos el primer usuario
+    const res1 = await request(server)
+      .post('/users')
+      .send({ name: 'Alice', email: 'alice@example.com' })
+      .expect(201);
+
+    // Intentamos crear otro usuario con el mismo email
+    const res2 = await request(server)
+      .post('/users')
+      .send({ name: 'Bob', email: 'alice@example.com' })
+      .expect(400); // o 409 si lanzas conflicto en tu servicio
+
+    // Revisamos que el error contenga algo sobre email duplicado
+    expect(res2.body).toHaveProperty('message');
+    expect(res2.body.message).toMatch(/email/i);
   });
 });
