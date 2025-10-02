@@ -34,8 +34,18 @@ export class UsersService {
     return user;
   }
 
-  async update(id: number, data: UpdateUserDto): Promise<User> {
-    const user = await this.findOne(id);
+async update(id: number, data: Partial<{ name: string; email: string; isActive?: boolean }>) {
+    const user = await this.usersRepo.findOne({ where: { id } });
+    if (!user) throw new NotFoundException('User not found');
+
+    // Si el email viene en data, comprobamos que no exista otro usuario con ese email
+    if (data.email) {
+      const existing = await this.usersRepo.findOne({ where: { email: data.email } });
+      if (existing && existing.id !== id) {
+        throw new BadRequestException('Email already in use');
+      }
+    }
+
     Object.assign(user, data);
     return this.usersRepo.save(user);
   }
